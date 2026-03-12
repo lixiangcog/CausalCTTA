@@ -1,4 +1,4 @@
-# C-TTA
+# CausalCTTA
 This is the pytorch implementation of our CausalCTTA
 
 <div align="center">
