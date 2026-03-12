@@ -22,4 +22,4 @@ Please first modify the root in ```example.sh``` and then run the following comm
 bash example.sh
 
 ## Acknowledgement
-Parts of the code are based on the Pytorch implementations of [VPTTA](https://github.com/Chen-Ziyang/VPTTA) and [CausalCLIPSeg](https://github.com/WUTCM-Lab/CausalCLIPSeg).
+Parts of the code are based on the Pytorch implementations of [VPTTA](https://github.com/Chen-Ziyang/VPTTA).
