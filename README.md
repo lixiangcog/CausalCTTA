@@ -1,5 +1,5 @@
 # CausalCTTA
-This is the pytorch implementation of our CausalCTTA
+This is the pytorch implementation of our CausalCTTA.
 
 <div align="center">
   <img width="100%" alt="VPTTA Illustration" src="image/Figure.png">
@@ -19,7 +19,9 @@ The preprocessed data and the pre-trained models can be downloaded from [Google 
 ## How to Run
 Please first modify the root in ```example.sh``` and then run the following command to reproduce the results.
 
+```
 bash example.sh
+```
 
 ## Acknowledgement
 Parts of the code are based on the Pytorch implementations of [VPTTA](https://github.com/Chen-Ziyang/VPTTA).
