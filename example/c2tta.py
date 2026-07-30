@@ -2,8 +2,8 @@ import os
 import torch
 import numpy as np
 import argparse, sys, datetime
+from pathlib import Path
 from config import *
-from torch.autograd import Variable
 from utils.convert import AdaBN
 from utils.memory import Memory
 from utils.prompt import Prompt
@@ -12,12 +12,10 @@ from networks.origin_ResUnet_TTA import ResUnet
 from torch.utils.data import DataLoader
 from dataloaders.OPTIC_dataloader import OPTIC_dataset
 from dataloaders.transform import collate_fn_wo_transform
-from dataloaders.convert_csv_to_list import convert_labeled_list
 from networks.causal import causal
 from networks.newprojector import Projector
+from experiment_config import load_target_records, target_datasets
 torch.set_num_threads(1)
-import pandas as pd
-from PCA import CausalTrimming
 
 import json
 from open_clip import create_model_and_transforms, get_tokenizer
@@ -26,24 +24,9 @@ from open_clip.factory import HF_HUB_PREFIX, _MODEL_CONFIGS
 class VPTTA:
     def __init__(self, config):
         # Data Loading
-        target_test_csv = []
-        for target in config.Target_Dataset:
-            if target != 'REFUGE_Valid' and target != 'ORIGA':
-                target_test_csv.append(target + '_train_pseudo.csv')
-                target_test_csv.append(target + '_test_pseudo.csv')
-            elif target == 'REFUGE_Valid':
-                target_test_csv.append(target + '_pseudo.csv')
-            else:
-                target_test_csv.append(target + '_train_pseudo.csv')   
-
-        ts_img_list = list()
-        ts_label_list = list()
-        ts_pseudo_list = list()
-        for csv_file in target_test_csv:
-            data = pd.read_csv(os.path.join(config.dataset_root, csv_file))
-            ts_img_list += data['image'].tolist()
-            ts_label_list += data['mask'].tolist()
-            ts_pseudo_list += data['pseudo_label'].tolist()
+        ts_img_list, ts_label_list, ts_pseudo_list = load_target_records(
+            config.dataset_root, config.Target_Dataset
+        )
         print("The number of target test samples: ", len(ts_img_list))
         target_test_dataset = OPTIC_dataset(config.dataset_root, ts_img_list, ts_label_list, ts_pseudo_list,
                                             config.image_size, img_normalize=True, Training=False)
@@ -55,6 +38,8 @@ class VPTTA:
                                              collate_fn=collate_fn_wo_transform,
                                              num_workers=config.num_workers)
         self.image_size = config.image_size
+        self.results_file = Path(config.path_save_log) / "results.txt"
+        self.results_file.parent.mkdir(parents=True, exist_ok=True)
 
         # Model
         self.load_model = os.path.join(config.model_root,str(config.Source_Dataset))  # Pre-trained Source Model
@@ -191,6 +176,8 @@ class VPTTA:
         metrics_test = [[], [], [], []]
 
         for batch, data in enumerate(self.target_test_loader):
+            if batch % 50 == 0:
+                print(f"Progress: {batch}/{len(self.target_test_loader)}", flush=True)
             newdata, y, pseudo = data['data'], data['mask'], data['pseudo_label']
             newdata = np.array(newdata)   # 如果x还不是数组，先转换
             newdata = newdata.transpose(1,0,2,3,4)  # 调整维度顺序
@@ -199,7 +186,9 @@ class VPTTA:
             y = torch.from_numpy(y).to(dtype=torch.float32)
             pseudo = torch.from_numpy(pseudo).to(dtype=torch.float32)
 
-            newdata, y, pseudo = Variable(newdata).to(self.device), Variable(y).to(self.device), Variable(pseudo).to(self.device)
+            newdata = newdata.to(self.device)
+            y = y.to(self.device)
+            pseudo = pseudo.to(self.device)
 
             x=newdata[0,:,:,:,:]  # 只使用原始图像进行测试
 
@@ -346,8 +335,6 @@ class VPTTA:
                             pred_confound= self.causal_module.seg_head_confound(v_inf)
 
             # Calculate the metrics
-            import matplotlib.pyplot as plt
-            from PIL import Image
             seg_output = torch.sigmoid(pred_causal)
             metrics = calculate_metrics(seg_output.detach().cpu(), y.detach().cpu())
             for i in range(len(metrics)):
@@ -362,7 +349,7 @@ class VPTTA:
         print('Mean Dice:', (print_test_metric_mean['Disc_Dice'] + print_test_metric_mean['Cup_Dice']) / 2)
         line1 = "Test Metrics: " + str(print_test_metric_mean)
         line2 = "Mean Dice: " + str((print_test_metric_mean['Disc_Dice'] + print_test_metric_mean['Cup_Dice']) / 2)
-        with open("results.txt", "a") as f:
+        with self.results_file.open("a") as f:
             f.write(line1 + "\n")
             f.write(line2 + "\n")
             f.write("\n")  # 写入一个空行，作为每次运行的分隔
@@ -373,7 +360,6 @@ if __name__ == '__main__':
     # Dataset
     parser.add_argument('--Source_Dataset', type=str, default='RIM_ONE_r3',
                         help='RIM_ONE_r3/REFUGE/ORIGA/REFUGE_Valid/Drishti_GS')
-    parser.add_argument('--Target_Dataset', type=list)
 
     parser.add_argument('--num_workers', type=int, default=8)
     parser.add_argument('--image_size', type=int, default=512)
@@ -404,7 +390,7 @@ if __name__ == '__main__':
     # Path
     parser.add_argument('--path_save_log', type=str, default='./logs')
     parser.add_argument('--model_root', type=str, default='./models')
-    parser.add_argument('--dataset_root', type=str, default='/media/userdisk0/zychen/Datasets/Fundus')
+    parser.add_argument('--dataset_root', type=str, default='./Fundus')
 
     # Cuda (default: the first available device)
     parser.add_argument('--device', type=str, default='cuda:0')
@@ -413,11 +399,13 @@ if __name__ == '__main__':
     parser.add_argument('--use_prompt', action='store_true', help='Whether to use the prompt')
     parser.add_argument('--use_AdaBN', action='store_true', help='Whether to convert BN to AdaBN')
     parser.add_argument('--clip', action='store_true', help='Whether to use CLIP text encoder')
+    parser.add_argument('--use_vida', action='store_true', help='Whether to use VIDA modules')
+    parser.add_argument('--use_dropout', action='store_true', help='Whether to use MC-Dropout')
+    parser.add_argument('--use_trans_input', action='store_true', help='Whether to augment the input')
 
     config = parser.parse_args()
 
-    config.Target_Dataset = ['RIM_ONE_r3', 'REFUGE', 'ORIGA', 'REFUGE_Valid', 'Drishti_GS']
-    config.Target_Dataset.remove(config.Source_Dataset)
+    config.Target_Dataset = target_datasets(config.Source_Dataset)
 
     TTA = VPTTA(config)
     TTA.run()
