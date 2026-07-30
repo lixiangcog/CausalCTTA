@@ -87,8 +87,16 @@ class TrainSource:
         else:
             source_train_csv.append(config.Source_Dataset + '.csv')
         sr_img_list, sr_label_list = convert_labeled_list(config.dataset_root, source_train_csv)
-        train_dataset = OPTIC_dataset(config.dataset_root, sr_img_list, sr_label_list,
-                                      config.image_size, img_normalize=False, batch_size=config.batch_size)
+        train_dataset = OPTIC_dataset(
+            config.dataset_root,
+            sr_img_list,
+            sr_label_list,
+            pseudo_list=None,
+            target_size=config.image_size,
+            img_normalize=False,
+            batch_size=config.batch_size,
+            Training=True,
+        )
         print('Source Train Dataset: ', source_train_csv, len(train_dataset))
         self.source_train_loader = DataLoader(dataset=train_dataset,
                                               batch_size=config.batch_size,
