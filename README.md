@@ -5,7 +5,7 @@ package contains no repository history, author metadata, machine-specific
 paths, datasets, checkpoints, generated masks, or experiment logs.
 
 <div align="center">
-  <img width="100%" alt="CausalCTTA overview" src="image/Figure.png">
+  <img width="100%" alt="CausalCTTA overview" src="image/method.png">
 </div>
 
 ## Environment
