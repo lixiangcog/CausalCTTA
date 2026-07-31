@@ -1,6 +1,6 @@
 # CausalCTTA
 
-Anonymous review release of the PyTorch implementation of CausalCTTA. This
+This is the PyTorch implementation of CausalCTTA. This
 package contains no repository history, author metadata, machine-specific
 paths, datasets, checkpoints, generated masks, or experiment logs.
 
@@ -22,7 +22,7 @@ conda activate causalctta
 
 ## Data and checkpoints
 
-The anonymous supplementary data and checkpoint links are distributed
+The supplementary data and checkpoint links are distributed
 separately from this source archive. Arrange the extracted files as follows:
 
 ```text
