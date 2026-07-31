@@ -39,9 +39,6 @@ example/
         └── last-Res_Unet.pth
 ```
 
-Do not place datasets, checkpoints, pseudo-label masks, or logs under version
-control. The included `.gitignore` excludes these artifacts.
-
 ## Run CausalCTTA
 
 The default experiment uses RIM-ONE-r3 as the source domain:
