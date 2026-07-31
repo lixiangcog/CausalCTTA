@@ -42,24 +42,6 @@ example/
 Do not place datasets, checkpoints, pseudo-label masks, or logs under version
 control. The included `.gitignore` excludes these artifacts.
 
-## Pseudo-label generation
-
-Generate SFDA-DPL-style MC-Dropout pseudo labels using thresholds calibrated
-on the labeled source split:
-
-```bash
-python generate_pseudo_sfda.py \
-  --dataset-root example/Fundus \
-  --model-file example/models/RIM_ONE_r3/last-Res_Unet.pth \
-  --output-root example/Fundus/pseudo_sfda_mc_t040/RIM_ONE_r3 \
-  --passes 10 \
-  --disc-threshold 0.40 \
-  --cup-threshold 0.40
-```
-
-Generated CSV manifests store paths relative to the dataset root so they do
-not disclose a local username or filesystem layout.
-
 ## Run CausalCTTA
 
 The default experiment uses RIM-ONE-r3 as the source domain:
@@ -79,17 +61,6 @@ MODEL_ROOT=/path/to/models \
 LOG_ROOT=/path/to/logs \
 bash example.sh
 ```
-
-## Release safety check
-
-Before committing or uploading the repository, run:
-
-```bash
-python verify_anonymity.py
-```
-
-The check rejects personal absolute paths, email addresses, checkpoints,
-archives, experiment logs, generated masks, and unexpected large files.
 
 ## Acknowledgement
 
